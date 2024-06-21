@@ -1,0 +1,81 @@
+syntax = "v1"
+
+type Zone {
+	Domain            string `json:"domain"`
+	Ttl               int    `json:"ttl"`
+	CacheTtl          int    `json:"cache_ttl"`
+	Expire            int    `json:"expire"`
+	MailAddress       string `json:"mail_address"`
+	PrimaryNameServer string `json:"primary_name_server"`
+	Refresh           int    `json:"refresh"`
+	Retry             int    `json:"retry"`
+	Serial            int    `json:"serial"`
+}
+
+type Record {
+	id     int    `json:"id"`
+	Domain string `json:"domain"`
+	Name   string `json:"name"`
+	Type   string `json:"type"`
+	Value  string `json:"value"`
+}
+
+type ZoneReq {
+	Domain            string `json:"domain"`
+	Ttl               int    `json:"ttl"`
+	CacheTtl          int    `json:"cache_ttl"`
+	Expire            int    `json:"expire"`
+	MailAddress       string `json:"mail_address"`
+	PrimaryNameServer string `json:"primary_name_server"`
+	Refresh           int    `json:"refresh"`
+	Retry             int    `json:"retry"`
+}
+
+type CreateRecord {
+	Domain string `json:"domain"`
+	Name   string `json:"name"`
+	Type   string `json:"type"`
+	Value  string `json:"value"`
+}
+
+type Message {
+	Code    int    `json:"code"`
+	Context string `json:"context"`
+}
+
+@server (
+	group:  zone
+	prefix: /api/v1
+)
+service bind9-api {
+	@handler GetZonesHandler
+	get /zones returns ([]Zone)
+
+	@handler CreateZoneHandler
+	post /zones (ZoneReq) returns (Message)
+
+	@handler UpdateZoneHandler
+	put /zones (ZoneReq) returns (Message)
+
+	@handler DeleteZoneHandler
+	delete /zones returns (Message)
+}
+
+@server (
+	group:  record
+	prefix: /api/v1
+)
+service bind9-api {
+	@handler GetRecordsHandler
+	get /records returns ([]Record)
+
+	@handler CreateRecordHandler
+	post /records (CreateRecord) returns (Message)
+
+	@handler UpdateRecordHandler
+	put /records (Record) returns (Message)
+
+	@handler DeleteRecordHandler
+	delete /records returns (Message)
+}
+

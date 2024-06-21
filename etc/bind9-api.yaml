@@ -1,0 +1,6 @@
+Name: bind9-api
+Host: 0.0.0.0
+Port: 8000
+Timeout: 10000
+DB: /data/sqlite.db
+BindPath: /etc/bind
