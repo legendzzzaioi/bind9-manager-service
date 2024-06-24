@@ -4,6 +4,7 @@ package handler
 import (
 	"net/http"
 
+	config "bind9-manager-service/internal/handler/config"
 	record "bind9-manager-service/internal/handler/record"
 	zone "bind9-manager-service/internal/handler/zone"
 	"bind9-manager-service/internal/svc"
@@ -12,6 +13,22 @@ import (
 )
 
 func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodGet,
+				Path:    "/config",
+				Handler: config.GetConfigHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPut,
+				Path:    "/config",
+				Handler: config.UpdateConfigHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/api/v1"),
+	)
+
 	server.AddRoutes(
 		[]rest.Route{
 			{

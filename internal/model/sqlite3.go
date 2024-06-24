@@ -4,7 +4,7 @@ import (
 	"bind9-manager-service/internal/types"
 	"database/sql"
 	"fmt"
-	"strconv"
+	"strings"
 	"time"
 
 	"github.com/mattn/go-sqlite3"
@@ -137,11 +137,8 @@ func CreateZone(db *sql.DB, zone types.ZoneReq) error {
 		}
 		defer stmt.Close()
 
-		// 获取当前时间并格式化为整数
-		serial, err := strconv.Atoi(time.Now().Format("200601021504"))
-		if err != nil {
-			return err
-		}
+		// 获取当前时间戳
+		serial := time.Now().Unix()
 		_, err = stmt.Exec(zone.Domain, zone.Ttl, zone.CacheTtl, zone.Expire, zone.MailAddress, zone.PrimaryNameServer, zone.Refresh, zone.Retry, serial)
 		return err
 	})
@@ -164,11 +161,8 @@ func UpdateZone(db *sql.DB, zone types.ZoneReq) error {
 		}
 		defer stmt.Close()
 
-		// 获取当前时间并格式化为整数
-		serial, err := strconv.Atoi(time.Now().Format("200601021504"))
-		if err != nil {
-			return err
-		}
+		// 获取当前时间戳
+		serial := time.Now().Unix()
 		_, err = stmt.Exec(zone.Ttl, zone.CacheTtl, zone.Expire, zone.MailAddress, zone.PrimaryNameServer, zone.Refresh, zone.Retry, serial, zone.Domain)
 		return err
 	})
@@ -284,17 +278,21 @@ func CreateRecord(db *sql.DB, record types.CreateRecord) error {
 		defer stmt.Close()
 		_, err = stmt.Exec(record.Domain, record.Name, record.Type, record.Value)
 		if err != nil {
-			if sqliteErr, ok := err.(sqlite3.Error); ok && sqliteErr.Code == sqlite3.ErrConstraint && sqliteErr.ExtendedCode == sqlite3.ErrConstraintUnique {
-				return fmt.Errorf("record already exists")
+			sqliteErr, ok := err.(sqlite3.Error)
+			if ok {
+				// 检查唯一约束错误
+				if sqliteErr.Code == sqlite3.ErrConstraint && sqliteErr.ExtendedCode == sqlite3.ErrConstraintUnique {
+					// 进一步验证错误消息确实指示了唯一约束失败
+					if strings.Contains(sqliteErr.Error(), "UNIQUE constraint failed") {
+						return fmt.Errorf("record already exists")
+					}
+				}
 			}
 			return err
 		}
 
-		// 获取当前时间并格式化为整数
-		serial, err := strconv.Atoi(time.Now().Format("200601021504"))
-		if err != nil {
-			return err
-		}
+		// 获取当前时间戳
+		serial := time.Now().Unix()
 		stmt, err = tx.Prepare("UPDATE zones SET soa_serial=? WHERE domain=?")
 		if err != nil {
 			return err
@@ -345,11 +343,8 @@ func UpdateRecord(db *sql.DB, record types.Record) error {
 			return err
 		}
 
-		// 获取当前时间并格式化为整数
-		serial, err := strconv.Atoi(time.Now().Format("200601021504"))
-		if err != nil {
-			return err
-		}
+		// 获取当前时间戳
+		serial := time.Now().Unix()
 		stmt, err = tx.Prepare("UPDATE zones SET soa_serial=? WHERE domain=?")
 		if err != nil {
 			return err
@@ -390,11 +385,8 @@ func DeleteRecord(db *sql.DB, id int) error {
 			return err
 		}
 
-		// 获取当前时间并格式化为整数
-		serial, err := strconv.Atoi(time.Now().Format("200601021504"))
-		if err != nil {
-			return err
-		}
+		// 获取当前时间戳
+		serial := time.Now().Unix()
 		stmt, err = tx.Prepare("UPDATE zones SET soa_serial=? WHERE domain=?")
 		if err != nil {
 			return err
@@ -433,4 +425,35 @@ func GetRecordById(db *sql.DB, id int) (record types.Record, err error) {
 	})
 
 	return record, err
+}
+
+// 获取config
+func GetConfig(db *sql.DB, key string) (types.Config, error) {
+	var config types.Config
+	query := "SELECT value FROM config WHERE key = ?"
+	err := db.QueryRow(query, key).Scan(&config.Value)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return types.Config{Key: key, Value: "no config found for key"}, fmt.Errorf("no config found for key: %s", key)
+		}
+		return types.Config{Key: key, Value: "no config found for key"}, err
+	}
+	return types.Config{Key: key, Value: config.Value}, nil
+}
+
+// 更新config
+func UpdateConfig(db *sql.DB, config types.Config) error {
+	query := "UPDATE config SET value = ? WHERE key = ?"
+	result, err := db.Exec(query, config.Value, config.Key)
+	if err != nil {
+		return err
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("no config found for key: %s", config.Key)
+	}
+	return nil
 }

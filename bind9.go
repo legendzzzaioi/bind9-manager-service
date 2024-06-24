@@ -34,7 +34,7 @@ func main() {
 
 	err = model.GenerateAllZoneFiles(ctx.DB, c.BindPath)
 	if err != nil {
-		log.Fatalf("failed to generate zone files: %v", err)
+		log.Fatalf("failed to generate files: %v", err)
 	}
 
 	defer ctx.DB.Close()

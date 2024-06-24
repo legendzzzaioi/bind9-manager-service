@@ -16,6 +16,11 @@ func GenerateAllZoneFiles(db *sql.DB, bindpath string) error {
 		return fmt.Errorf("failed to create bindpath directory: %w", err)
 	}
 
+	// 写入 named.conf.options 文件
+	if err := GenerateNamedOptionsConf(db, bindpath); err != nil {
+		return fmt.Errorf("failed to generate named.conf.options: %w", err)
+	}
+
 	// 获取所有 zone
 	zones, err := GetZones(db)
 	if err != nil {
@@ -48,7 +53,7 @@ func GenerateAllZoneFiles(db *sql.DB, bindpath string) error {
 
 		// 构建named.conf.local文件内容
 		fileName := filepath.Join(bindpath, fmt.Sprintf("db-%s", zone.Domain))
-		zoneConfig := fmt.Sprintf(`zone "%s" {type primary; file "%s";};`+"\n", zone.Domain, fileName)
+		zoneConfig := fmt.Sprintf(`zone "%s" {type master; file "%s";};`+"\n", zone.Domain, fileName)
 		fileContent += zoneConfig
 	}
 
@@ -93,7 +98,7 @@ func GenerateNamedLocalConf(db *sql.DB, bindpath string) error {
 	var fileContent string
 	for _, zone := range zones {
 		fileName := filepath.Join(bindpath, fmt.Sprintf("db-%s", zone.Domain))
-		zoneConfig := fmt.Sprintf(`zone "%s" {type primary; file "%s";};`+"\n", zone.Domain, fileName)
+		zoneConfig := fmt.Sprintf(`zone "%s" {type master; file "%s";};`+"\n", zone.Domain, fileName)
 		fileContent += zoneConfig
 	}
 
@@ -208,6 +213,35 @@ func DeleteZoneFileByDomain(bindpath string, domain string) error {
 	// 尝试删除文件
 	if err := os.Remove(fileName); err != nil {
 		return fmt.Errorf("failed to delete file %s: %w", fileName, err)
+	}
+
+	return nil
+}
+
+// 生成 named.conf.options 文件
+func GenerateNamedOptionsConf(db *sql.DB, bindpath string) error {
+	// 确保 bindpath 目录存在
+	if err := os.MkdirAll(bindpath, 0755); err != nil {
+		return fmt.Errorf("failed to create bindpath directory: %w", err)
+	}
+
+	// 打开 named.conf.options 文件进行重写操作
+	namedOptionsConfFile, err := os.OpenFile(filepath.Join(bindpath, "named.conf.options"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to open named.conf.options: %w", err)
+	}
+	defer namedOptionsConfFile.Close()
+
+	// 获取 named.conf.options 文件内容
+	namedConfOptions, err := GetConfig(db, "named.conf.options")
+	if err != nil {
+		return fmt.Errorf("failed to get named.conf.options: %w", err)
+	}
+
+	// 写入 named.conf.options 文件内容
+	_, err = namedOptionsConfFile.WriteString(namedConfOptions.Value)
+	if err != nil {
+		return fmt.Errorf("failed to write named.conf.options: %w", err)
 	}
 
 	return nil

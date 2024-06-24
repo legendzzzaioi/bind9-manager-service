@@ -27,7 +27,7 @@ COPY --from=builder /usr/share/zoneinfo/Asia/Shanghai /usr/share/zoneinfo/Asia/S
 COPY --from=builder /app/bind9-manager-service /app/bind9-manager-service
 COPY --from=builder /app/etc /app/etc
 
-VOLUME ["/etc/bind"]
+VOLUME ["/data"]
 
 EXPOSE 53/udp 53/tcp 953/tcp 8000/tcp
 
