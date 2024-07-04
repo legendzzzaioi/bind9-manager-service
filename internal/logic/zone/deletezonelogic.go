@@ -2,7 +2,9 @@ package zone
 
 import (
 	"context"
+	"net/http"
 
+	"bind9-manager-service/internal/middleware"
 	"bind9-manager-service/internal/model"
 	"bind9-manager-service/internal/svc"
 	"bind9-manager-service/internal/types"
@@ -24,18 +26,29 @@ func NewDeleteZoneLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Delete
 	}
 }
 
-func (l *DeleteZoneLogic) DeleteZone(domain string, record bool) (resp *types.Message, err error) {
+func (l *DeleteZoneLogic) DeleteZone(r *http.Request, domain string, record bool) (resp *types.Message, err error) {
+	claims, ok := r.Context().Value(middleware.ClaimsKey).(*middleware.MyClaims)
+	if !ok {
+		return &types.Message{Code: 400, Context: "unauthorized"}, nil
+	}
+
+	if claims.Role != "admin" {
+		return &types.Message{Code: 400, Context: "role forbidden"}, nil
+	}
+
 	if domain == "" {
 		return &types.Message{Code: 400, Context: "domain cannot be empty"}, nil
 	}
-	err = model.DeleteZone(l.svcCtx.DB, domain, record)
+	err = model.DeleteZone(l.svcCtx.DataSource, domain, record)
 	if err != nil {
 		return &types.Message{Code: 400, Context: err.Error()}, nil
 	}
 
+	model.CreateOperationLog(l.svcCtx.DataSource, claims.Username, "delete", "zone "+domain)
+
 	bindPath := l.svcCtx.Config.BindPath
 
-	if err := model.GenerateNamedLocalConf(l.svcCtx.DB, bindPath); err != nil {
+	if err := model.GenerateNamedLocalConf(l.svcCtx.DataSource, bindPath); err != nil {
 		return &types.Message{Code: 400, Context: err.Error()}, nil
 	}
 

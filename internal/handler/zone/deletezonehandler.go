@@ -15,7 +15,7 @@ func DeleteZoneHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		domain := r.URL.Query().Get("domain")
 		record := r.URL.Query().Get("record") == "true"
 		l := zone.NewDeleteZoneLogic(r.Context(), svcCtx)
-		resp, err := l.DeleteZone(domain, record)
+		resp, err := l.DeleteZone(r, domain, record)
 		if err != nil {
 			httpx.ErrorCtx(r.Context(), w, err)
 		} else {

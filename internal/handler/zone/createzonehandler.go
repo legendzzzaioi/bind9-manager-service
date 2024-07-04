@@ -19,7 +19,7 @@ func CreateZoneHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		}
 
 		l := zone.NewCreateZoneLogic(r.Context(), svcCtx)
-		resp, err := l.CreateZone(&req)
+		resp, err := l.CreateZone(r, &req)
 		if err != nil {
 			httpx.ErrorCtx(r.Context(), w, err)
 		} else {

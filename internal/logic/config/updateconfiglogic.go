@@ -2,7 +2,9 @@ package config
 
 import (
 	"context"
+	"net/http"
 
+	"bind9-manager-service/internal/middleware"
 	"bind9-manager-service/internal/model"
 	"bind9-manager-service/internal/svc"
 	"bind9-manager-service/internal/types"
@@ -24,16 +26,27 @@ func NewUpdateConfigLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Upda
 	}
 }
 
-func (l *UpdateConfigLogic) UpdateConfig(req *types.Config) (resp *types.Message, err error) {
+func (l *UpdateConfigLogic) UpdateConfig(r *http.Request, req *types.Config) (resp *types.Message, err error) {
+	claims, ok := r.Context().Value(middleware.ClaimsKey).(*middleware.MyClaims)
+	if !ok {
+		return &types.Message{Code: 400, Context: "unauthorized"}, nil
+	}
+
+	if claims.Role != "admin" {
+		return &types.Message{Code: 400, Context: "role forbidden"}, nil
+	}
+
 	if req.Key == "" || req.Value == "" {
 		return &types.Message{Code: 400, Context: "key,value cannot be empty"}, nil
 	}
-	err = model.UpdateConfig(l.svcCtx.DB, *req)
+	err = model.UpdateConfig(l.svcCtx.DataSource, *req)
 	if err != nil {
 		return &types.Message{Code: 400, Context: err.Error()}, nil
 	}
 
-	err = model.GenerateNamedOptionsConf(l.svcCtx.DB, l.svcCtx.Config.BindPath)
+	model.CreateOperationLog(l.svcCtx.DataSource, claims.Username, "update", "config "+req.Key)
+
+	err = model.GenerateNamedOptionsConf(l.svcCtx.DataSource, l.svcCtx.Config.BindPath)
 	if err != nil {
 		return &types.Message{Code: 400, Context: err.Error()}, nil
 	}

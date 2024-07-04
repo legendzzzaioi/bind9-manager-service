@@ -29,7 +29,7 @@ func (l *GetConfigLogic) GetConfig(key string) (resp *types.Config, err error) {
 	if key == "" {
 		return nil, fmt.Errorf("key cannot be empty")
 	}
-	config, err := model.GetConfig(l.svcCtx.DB, key)
+	config, err := model.GetConfig(l.svcCtx.DataSource, key)
 	if err != nil {
 		return nil, err
 	}

@@ -25,7 +25,7 @@ func DeleteRecordHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		}
 
 		l := record.NewDeleteRecordLogic(r.Context(), svcCtx)
-		resp, err := l.DeleteRecord(id)
+		resp, err := l.DeleteRecord(r, id)
 		if err != nil {
 			httpx.ErrorCtx(r.Context(), w, err)
 		} else {

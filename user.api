@@ -1,0 +1,75 @@
+syntax = "v1"
+
+type CreateUserReq {
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Role     string `json:"role"`
+}
+
+type GetUserResp {
+	Id       int    `json:"id"`
+	Username string `json:"username"`
+	Role     string `json:"role"`
+	CreateAt string `json:"created_at"`
+	UpdateAt string `json:"updated_at"`
+}
+
+type UpdateUserReq {
+	Username string `json:"username"`
+	Role     string `json:"role"`
+}
+
+type UpdateUserPassReq {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+type LoginReq {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+type LoginResp {
+	Token string `json:"token"`
+}
+
+@server (
+	group:  login
+	prefix: /api/v1
+)
+service bind9-api {
+	@handler LoginHandler
+	post /login (LoginReq) returns (LoginResp)
+}
+
+@server (
+	group:      login
+	prefix:     /api/v1
+	middleware: JwtAuthMiddleware
+)
+service bind9-api {
+	@handler LogoutHandler
+	post /logout
+}
+
+@server (
+	group:      user
+	prefix:     /api/v1
+	middleware: JwtAuthMiddleware
+)
+service bind9-api {
+	@handler GetUserHandler
+	get /user returns ([]GetUserResp)
+
+	@handler CreateUserHandler
+	post /user (CreateUserReq) returns (Message)
+
+	@handler UpdateUserHandler
+	put /user (UpdateUserReq) returns (Message)
+
+	@handler DeleteUserHandler
+	delete /user returns (Message)
+
+	@handler UpdateUserPassHandler
+	put /password returns (Message)
+}

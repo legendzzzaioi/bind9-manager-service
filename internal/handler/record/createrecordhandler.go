@@ -19,7 +19,7 @@ func CreateRecordHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		}
 
 		l := record.NewCreateRecordLogic(r.Context(), svcCtx)
-		resp, err := l.CreateRecord(&req)
+		resp, err := l.CreateRecord(r, &req)
 		if err != nil {
 			httpx.ErrorCtx(r.Context(), w, err)
 		} else {

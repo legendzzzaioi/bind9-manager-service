@@ -1,5 +1,8 @@
 syntax = "v1"
 
+import "user.api"
+import "log.api"
+
 type Zone {
 	Domain            string `json:"domain"`
 	Ttl               int    `json:"ttl"`
@@ -13,7 +16,7 @@ type Zone {
 }
 
 type Record {
-	id     int    `json:"id"`
+	Id     int    `json:"id"`
 	Domain string `json:"domain"`
 	Name   string `json:"name"`
 	Type   string `json:"type"`
@@ -49,8 +52,9 @@ type Config {
 }
 
 @server (
-	group:  zone
-	prefix: /api/v1
+	group:      zone
+	prefix:     /api/v1
+	middleware: JwtAuthMiddleware
 )
 service bind9-api {
 	@handler GetZonesHandler
@@ -67,8 +71,9 @@ service bind9-api {
 }
 
 @server (
-	group:  record
-	prefix: /api/v1
+	group:      record
+	prefix:     /api/v1
+	middleware: JwtAuthMiddleware
 )
 service bind9-api {
 	@handler GetRecordsHandler
@@ -85,8 +90,9 @@ service bind9-api {
 }
 
 @server (
-	group:  config
-	prefix: /api/v1
+	group:      config
+	prefix:     /api/v1
+	middleware: JwtAuthMiddleware
 )
 service bind9-api {
 	@handler GetConfigHandler

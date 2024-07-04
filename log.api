@@ -1,0 +1,56 @@
+syntax = "v1"
+
+type OperationLog {
+	Id        int    `json:"id"`
+	Username  string `json:"username"`
+	Operation string `json:"operation"`
+	Context   string `json:"context"`
+	CreateAt  string `json:"created_at"`
+}
+
+type UserLog {
+	Id        int    `json:"id"`
+	Username  string `json:"username"`
+	Operation string `json:"operation"`
+	Context   string `json:"context"`
+	CreateAt  string `json:"created_at"`
+}
+
+type LoginLog {
+	Id        int    `json:"id"`
+	Username  string `json:"username"`
+	Ip        string `json:"ip"`
+	Operation string `json:"operation"`
+	CreateAt  string `json:"created_at"`
+}
+
+type OperationLogResp {
+	Logs  []OperationLog   `json:"logs"`
+	Total int              `json:"total"`
+}
+
+type UserLogResp {
+	Logs  []UserLog   `json:"logs"`
+	Total int              `json:"total"`
+}
+
+type LoginLogResp {
+	Logs  []LoginLog   `json:"logs"`
+	Total int              `json:"total"`
+}
+
+@server (
+	group:      log
+	prefix:     /api/v1
+	middleware: JwtAuthMiddleware
+)
+service bind9-api {
+	@handler GetOperationLogHandler
+	get /operation_logs returns (OperationLogResp)
+
+	@handler GetUserLogHandler
+	get /user_logs returns (UserLogResp)
+
+	@handler GetLoginLogHandler
+	get /login_logs returns (LoginLogResp)
+}

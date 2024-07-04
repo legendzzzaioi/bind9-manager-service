@@ -5,7 +5,10 @@ import (
 	"net/http"
 
 	config "bind9-manager-service/internal/handler/config"
+	log "bind9-manager-service/internal/handler/log"
+	login "bind9-manager-service/internal/handler/login"
 	record "bind9-manager-service/internal/handler/record"
+	user "bind9-manager-service/internal/handler/user"
 	zone "bind9-manager-service/internal/handler/zone"
 	"bind9-manager-service/internal/svc"
 
@@ -14,70 +17,162 @@ import (
 
 func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 	server.AddRoutes(
-		[]rest.Route{
-			{
-				Method:  http.MethodGet,
-				Path:    "/config",
-				Handler: config.GetConfigHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPut,
-				Path:    "/config",
-				Handler: config.UpdateConfigHandler(serverCtx),
-			},
-		},
+		rest.WithMiddlewares(
+			[]rest.Middleware{serverCtx.JwtAuthMiddleware},
+			[]rest.Route{
+				{
+					Method:  http.MethodGet,
+					Path:    "/config",
+					Handler: config.GetConfigHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPut,
+					Path:    "/config",
+					Handler: config.UpdateConfigHandler(serverCtx),
+				},
+			}...,
+		),
+		rest.WithPrefix("/api/v1"),
+	)
+
+	server.AddRoutes(
+		rest.WithMiddlewares(
+			[]rest.Middleware{serverCtx.JwtAuthMiddleware},
+			[]rest.Route{
+				{
+					Method:  http.MethodGet,
+					Path:    "/login_logs",
+					Handler: log.GetLoginLogHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodGet,
+					Path:    "/operation_logs",
+					Handler: log.GetOperationLogHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodGet,
+					Path:    "/user_logs",
+					Handler: log.GetUserLogHandler(serverCtx),
+				},
+			}...,
+		),
 		rest.WithPrefix("/api/v1"),
 	)
 
 	server.AddRoutes(
 		[]rest.Route{
 			{
-				Method:  http.MethodGet,
-				Path:    "/records",
-				Handler: record.GetRecordsHandler(serverCtx),
-			},
-			{
 				Method:  http.MethodPost,
-				Path:    "/records",
-				Handler: record.CreateRecordHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPut,
-				Path:    "/records",
-				Handler: record.UpdateRecordHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodDelete,
-				Path:    "/records",
-				Handler: record.DeleteRecordHandler(serverCtx),
+				Path:    "/login",
+				Handler: login.LoginHandler(serverCtx),
 			},
 		},
 		rest.WithPrefix("/api/v1"),
 	)
 
 	server.AddRoutes(
-		[]rest.Route{
-			{
-				Method:  http.MethodGet,
-				Path:    "/zones",
-				Handler: zone.GetZonesHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/zones",
-				Handler: zone.CreateZoneHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPut,
-				Path:    "/zones",
-				Handler: zone.UpdateZoneHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodDelete,
-				Path:    "/zones",
-				Handler: zone.DeleteZoneHandler(serverCtx),
-			},
-		},
+		rest.WithMiddlewares(
+			[]rest.Middleware{serverCtx.JwtAuthMiddleware},
+			[]rest.Route{
+				{
+					Method:  http.MethodPost,
+					Path:    "/logout",
+					Handler: login.LogoutHandler(serverCtx),
+				},
+			}...,
+		),
+		rest.WithPrefix("/api/v1"),
+	)
+
+	server.AddRoutes(
+		rest.WithMiddlewares(
+			[]rest.Middleware{serverCtx.JwtAuthMiddleware},
+			[]rest.Route{
+				{
+					Method:  http.MethodGet,
+					Path:    "/records",
+					Handler: record.GetRecordsHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/records",
+					Handler: record.CreateRecordHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPut,
+					Path:    "/records",
+					Handler: record.UpdateRecordHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodDelete,
+					Path:    "/records",
+					Handler: record.DeleteRecordHandler(serverCtx),
+				},
+			}...,
+		),
+		rest.WithPrefix("/api/v1"),
+	)
+
+	server.AddRoutes(
+		rest.WithMiddlewares(
+			[]rest.Middleware{serverCtx.JwtAuthMiddleware},
+			[]rest.Route{
+				{
+					Method:  http.MethodPut,
+					Path:    "/password",
+					Handler: user.UpdateUserPassHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodGet,
+					Path:    "/user",
+					Handler: user.GetUserHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/user",
+					Handler: user.CreateUserHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPut,
+					Path:    "/user",
+					Handler: user.UpdateUserHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodDelete,
+					Path:    "/user",
+					Handler: user.DeleteUserHandler(serverCtx),
+				},
+			}...,
+		),
+		rest.WithPrefix("/api/v1"),
+	)
+
+	server.AddRoutes(
+		rest.WithMiddlewares(
+			[]rest.Middleware{serverCtx.JwtAuthMiddleware},
+			[]rest.Route{
+				{
+					Method:  http.MethodGet,
+					Path:    "/zones",
+					Handler: zone.GetZonesHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/zones",
+					Handler: zone.CreateZoneHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPut,
+					Path:    "/zones",
+					Handler: zone.UpdateZoneHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodDelete,
+					Path:    "/zones",
+					Handler: zone.DeleteZoneHandler(serverCtx),
+				},
+			}...,
+		),
 		rest.WithPrefix("/api/v1"),
 	)
 }

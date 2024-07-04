@@ -25,7 +25,7 @@ func NewGetZonesLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetZones
 }
 
 func (l *GetZonesLogic) GetZones() (resp []types.Zone, err error) {
-	zones, err := model.GetZones(l.svcCtx.DB)
+	zones, err := model.GetZones(l.svcCtx.DataSource)
 	if err != nil {
 		return nil, err
 	}

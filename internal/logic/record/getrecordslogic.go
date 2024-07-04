@@ -29,7 +29,7 @@ func (l *GetRecordsLogic) GetRecords(domain string) (resp []types.Record, err er
 	if domain == "" {
 		return nil, fmt.Errorf("domain cannot be empty")
 	}
-	records, err := model.GetRecords(l.svcCtx.DB, domain)
+	records, err := model.GetRecords(l.svcCtx.DataSource, domain)
 	if err != nil {
 		return nil, err
 	}

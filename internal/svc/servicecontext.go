@@ -2,24 +2,32 @@ package svc
 
 import (
 	"bind9-manager-service/internal/config"
+	"bind9-manager-service/internal/middleware"
 	"database/sql"
 	"os"
+	"time"
+
+	"github.com/zeromicro/go-zero/rest"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type ServiceContext struct {
-	Config config.Config
-	DB     *sql.DB
+	Config            config.Config
+	DataSource        *sql.DB
+	JwtAuthMiddleware rest.Middleware
 }
 
 func NewServiceContext(c config.Config) (*ServiceContext, error) {
-	db, err := InitDB(c.DB)
+	jwtMiddleware := middleware.NewJwtAuthMiddleware(c.JwtAuth.AccessSecret)
+	db, err := InitDB(c.DataSource)
 	if err != nil {
 		return nil, err
 	}
 
 	return &ServiceContext{
-		Config: c,
-		DB:     db,
+		Config:            c,
+		DataSource:        db,
+		JwtAuthMiddleware: jwtMiddleware.Handle,
 	}, nil
 }
 
@@ -49,6 +57,36 @@ func InitDB(filepath string) (*sql.DB, error) {
 		key TEXT PRIMARY KEY,
 		value TEXT NOT NULL
 	);
+	CREATE TABLE users (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		username VARCHAR(255) UNIQUE NOT NULL,
+		password VARCHAR(255) NOT NULL,
+		role VARCHAR(50) NOT NULL,
+		created_at TIMESTAMP NOT NULL,
+		updated_at TIMESTAMP NOT NULL
+	);
+	CREATE TABLE operation_logs (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		username VARCHAR(255) NOT NULL,
+		operation VARCHAR(255) NOT NULL,
+		context TEXT NOT NULL,
+		created_at TIMESTAMP NOT NULL
+	);
+	CREATE TABLE user_logs (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		username VARCHAR(255) NOT NULL,
+		operation TEXT NOT NULL,
+		context TEXT NOT NULL,
+		created_at TIMESTAMP NOT NULL
+	);
+	CREATE TABLE login_logs (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		username VARCHAR(255) NOT NULL,
+		ip VARCHAR(255) NOT NULL,
+		operation TEXT NOT NULL,
+		created_at TIMESTAMP NOT NULL
+	);
+	CREATE INDEX idx_records ON records (domain, name, type, value);
 	`
 	configContent := `options {
         directory "/var/cache/bind";
@@ -96,6 +134,18 @@ func InitDB(filepath string) (*sql.DB, error) {
 		}
 
 		_, err = db.Exec("INSERT INTO config (key, value) VALUES (?, ?)", "named.conf.options", configContent)
+		if err != nil {
+			return nil, err
+		}
+
+		bytes, err := bcrypt.GenerateFromPassword([]byte("admin"), 14)
+		if err != nil {
+			return nil, err
+		}
+		password := string(bytes)
+
+		// 初始化用户
+		_, err = db.Exec("INSERT INTO users (username, password, role, created_at, updated_at) VALUES (?, ?, ?, ?, ?)", "admin", password, "admin", time.Now().Format("2006-01-02 15:04:05"), time.Now().Format("2006-01-02 15:04:05"))
 		if err != nil {
 			return nil, err
 		}

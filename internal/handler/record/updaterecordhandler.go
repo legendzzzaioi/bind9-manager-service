@@ -6,6 +6,7 @@ import (
 	"bind9-manager-service/internal/logic/record"
 	"bind9-manager-service/internal/svc"
 	"bind9-manager-service/internal/types"
+
 	"github.com/zeromicro/go-zero/rest/httpx"
 )
 
@@ -18,7 +19,7 @@ func UpdateRecordHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		}
 
 		l := record.NewUpdateRecordLogic(r.Context(), svcCtx)
-		resp, err := l.UpdateRecord(&req)
+		resp, err := l.UpdateRecord(r, &req)
 		if err != nil {
 			httpx.ErrorCtx(r.Context(), w, err)
 		} else {
