@@ -14,6 +14,7 @@ Run Docker Container
 
 ```
 docker run -d \
+  --restart always \
   -p 53:53/tcp \
   -p 53:53/udp \
   -p 127.0.0.1:953:953/tcp \
