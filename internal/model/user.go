@@ -121,7 +121,9 @@ func GetAllUsers(db *sql.DB) (users []types.GetUserResp, err error) {
 	if err != nil {
 		return users, err
 	}
-	defer rows.Close()
+	defer func(rows *sql.Rows) {
+		_ = rows.Close()
+	}(rows)
 
 	for rows.Next() {
 		var user types.GetUserResp

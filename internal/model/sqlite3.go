@@ -3,6 +3,7 @@ package model
 import (
 	"bind9-manager-service/internal/types"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -37,9 +38,9 @@ func withTransaction(db *sql.DB, fn func(*sql.Tx) error) error {
 
 	defer func() {
 		if err != nil {
-			tx.Rollback()
+			_ = tx.Rollback()
 		} else {
-			tx.Commit()
+			_ = tx.Commit()
 		}
 	}()
 
@@ -47,7 +48,7 @@ func withTransaction(db *sql.DB, fn func(*sql.Tx) error) error {
 	return err
 }
 
-// 检查 zone 是否存在
+// ZoneIsExist 检查 zone 是否存在
 func ZoneIsExist(tx *sql.Tx, domain string) (bool, error) {
 	var exists bool
 	if domain == "" {
@@ -58,7 +59,7 @@ func ZoneIsExist(tx *sql.Tx, domain string) (bool, error) {
 	return exists, err
 }
 
-// 检查 record 是否存在
+// RecordIsExist 检查 record 是否存在
 func RecordIsExist(tx *sql.Tx, id int) (bool, error) {
 	var exists bool
 	if id <= 0 {
@@ -69,7 +70,7 @@ func RecordIsExist(tx *sql.Tx, id int) (bool, error) {
 	return exists, err
 }
 
-// 获取指定 zone
+// GetZoneByDomain 获取指定 zone
 func GetZoneByDomain(db *sql.DB, domain string) (types.Zone, error) {
 	var zone types.Zone
 	err := withTransaction(db, func(tx *sql.Tx) error {
@@ -95,13 +96,15 @@ func GetZoneByDomain(db *sql.DB, domain string) (types.Zone, error) {
 	return zone, nil
 }
 
-// 获取 zones 列表
+// GetZones 获取 zones 列表
 func GetZones(db *sql.DB) ([]types.Zone, error) {
 	rows, err := db.Query("SELECT domain, soa_ttl, soa_cache_ttl, soa_expire, soa_mail_address, soa_primary_name_server, soa_refresh, soa_retry, soa_serial FROM zones")
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func(rows *sql.Rows) {
+		_ = rows.Close()
+	}(rows)
 
 	var zones []types.Zone
 	for rows.Next() {
@@ -120,7 +123,7 @@ func GetZones(db *sql.DB) ([]types.Zone, error) {
 	return zones, nil
 }
 
-// 创建 zone
+// CreateZone 创建 zone
 func CreateZone(db *sql.DB, zone types.ZoneReq) error {
 	return withTransaction(db, func(tx *sql.Tx) error {
 		exists, err := ZoneIsExist(tx, zone.Domain)
@@ -135,7 +138,9 @@ func CreateZone(db *sql.DB, zone types.ZoneReq) error {
 		if err != nil {
 			return err
 		}
-		defer stmt.Close()
+		defer func(stmt *sql.Stmt) {
+			_ = stmt.Close()
+		}(stmt)
 
 		// 获取当前时间戳
 		serial := time.Now().Unix()
@@ -144,7 +149,7 @@ func CreateZone(db *sql.DB, zone types.ZoneReq) error {
 	})
 }
 
-// 更新 zone
+// UpdateZone 更新 zone
 func UpdateZone(db *sql.DB, zone types.ZoneReq) error {
 	return withTransaction(db, func(tx *sql.Tx) error {
 		exists, err := ZoneIsExist(tx, zone.Domain)
@@ -159,7 +164,9 @@ func UpdateZone(db *sql.DB, zone types.ZoneReq) error {
 		if err != nil {
 			return err
 		}
-		defer stmt.Close()
+		defer func(stmt *sql.Stmt) {
+			_ = stmt.Close()
+		}(stmt)
 
 		// 获取当前时间戳
 		serial := time.Now().Unix()
@@ -168,7 +175,7 @@ func UpdateZone(db *sql.DB, zone types.ZoneReq) error {
 	})
 }
 
-// 删除 zone
+// DeleteZone 删除 zone
 func DeleteZone(db *sql.DB, domain string, record bool) error {
 	return withTransaction(db, func(tx *sql.Tx) error {
 		exists, err := ZoneIsExist(tx, domain)
@@ -183,7 +190,9 @@ func DeleteZone(db *sql.DB, domain string, record bool) error {
 		if err != nil {
 			return err
 		}
-		defer stmt.Close()
+		defer func(stmt *sql.Stmt) {
+			_ = stmt.Close()
+		}(stmt)
 		_, err = stmt.Exec(domain)
 		if err != nil {
 			return err
@@ -194,7 +203,9 @@ func DeleteZone(db *sql.DB, domain string, record bool) error {
 			if err != nil {
 				return err
 			}
-			defer stmt.Close()
+			defer func(stmt *sql.Stmt) {
+				_ = stmt.Close()
+			}(stmt)
 			_, err = stmt.Exec(domain)
 			if err != nil {
 				return err
@@ -205,7 +216,7 @@ func DeleteZone(db *sql.DB, domain string, record bool) error {
 	})
 }
 
-// 获取 records 列表
+// GetRecords 获取 records 列表
 func GetRecords(db *sql.DB, domain string) ([]types.Record, error) {
 	var records []types.Record
 
@@ -224,7 +235,9 @@ func GetRecords(db *sql.DB, domain string) ([]types.Record, error) {
 		if err != nil {
 			return err
 		}
-		defer rows.Close()
+		defer func(rows *sql.Rows) {
+			_ = rows.Close()
+		}(rows)
 
 		// 迭代查询结果
 		for rows.Next() {
@@ -256,7 +269,7 @@ func GetRecords(db *sql.DB, domain string) ([]types.Record, error) {
 	return records, nil
 }
 
-// 创建 record
+// CreateRecord 创建 record
 func CreateRecord(db *sql.DB, record types.CreateRecord) error {
 	return withTransaction(db, func(tx *sql.Tx) error {
 		exists, err := ZoneIsExist(tx, record.Domain)
@@ -275,13 +288,16 @@ func CreateRecord(db *sql.DB, record types.CreateRecord) error {
 		if err != nil {
 			return err
 		}
-		defer stmt.Close()
+		defer func(stmt *sql.Stmt) {
+			_ = stmt.Close()
+		}(stmt)
 		_, err = stmt.Exec(record.Domain, record.Name, record.Type, record.Value)
 		if err != nil {
-			sqliteErr, ok := err.(sqlite3.Error)
+			var sqliteErr sqlite3.Error
+			ok := errors.As(err, &sqliteErr)
 			if ok {
 				// 检查唯一约束错误
-				if sqliteErr.Code == sqlite3.ErrConstraint && sqliteErr.ExtendedCode == sqlite3.ErrConstraintUnique {
+				if errors.Is(sqliteErr.Code, sqlite3.ErrConstraint) && errors.Is(sqliteErr.ExtendedCode, sqlite3.ErrConstraintUnique) {
 					// 进一步验证错误消息确实指示了唯一约束失败
 					if strings.Contains(sqliteErr.Error(), "UNIQUE constraint failed") {
 						return fmt.Errorf("record already exists")
@@ -297,7 +313,9 @@ func CreateRecord(db *sql.DB, record types.CreateRecord) error {
 		if err != nil {
 			return err
 		}
-		defer stmt.Close()
+		defer func(stmt *sql.Stmt) {
+			_ = stmt.Close()
+		}(stmt)
 		_, err = stmt.Exec(serial, record.Domain)
 		if err != nil {
 			return err
@@ -307,7 +325,7 @@ func CreateRecord(db *sql.DB, record types.CreateRecord) error {
 	})
 }
 
-// 更新 record
+// UpdateRecord 更新 record
 func UpdateRecord(db *sql.DB, record types.Record) error {
 	return withTransaction(db, func(tx *sql.Tx) error {
 		exists, err := RecordIsExist(tx, record.Id)
@@ -334,10 +352,13 @@ func UpdateRecord(db *sql.DB, record types.Record) error {
 		if err != nil {
 			return err
 		}
-		defer stmt.Close()
+		defer func(stmt *sql.Stmt) {
+			_ = stmt.Close()
+		}(stmt)
 		_, err = stmt.Exec(record.Domain, record.Name, record.Type, record.Value, record.Id)
 		if err != nil {
-			if sqliteErr, ok := err.(sqlite3.Error); ok && sqliteErr.Code == sqlite3.ErrConstraint && sqliteErr.ExtendedCode == sqlite3.ErrConstraintUnique {
+			var sqliteErr sqlite3.Error
+			if errors.As(err, &sqliteErr) && errors.Is(sqliteErr.Code, sqlite3.ErrConstraint) && errors.Is(sqliteErr.ExtendedCode, sqlite3.ErrConstraintUnique) {
 				return fmt.Errorf("record already exists")
 			}
 			return err
@@ -349,7 +370,9 @@ func UpdateRecord(db *sql.DB, record types.Record) error {
 		if err != nil {
 			return err
 		}
-		defer stmt.Close()
+		defer func(stmt *sql.Stmt) {
+			_ = stmt.Close()
+		}(stmt)
 		_, err = stmt.Exec(serial, record.Domain)
 		if err != nil {
 			return err
@@ -359,7 +382,7 @@ func UpdateRecord(db *sql.DB, record types.Record) error {
 	})
 }
 
-// 删除 record
+// DeleteRecord 删除 record
 func DeleteRecord(db *sql.DB, id int) error {
 	return withTransaction(db, func(tx *sql.Tx) error {
 		exists, err := RecordIsExist(tx, id)
@@ -379,7 +402,9 @@ func DeleteRecord(db *sql.DB, id int) error {
 		if err != nil {
 			return err
 		}
-		defer stmt.Close()
+		defer func(stmt *sql.Stmt) {
+			_ = stmt.Close()
+		}(stmt)
 		_, err = stmt.Exec(id)
 		if err != nil {
 			return err
@@ -391,7 +416,9 @@ func DeleteRecord(db *sql.DB, id int) error {
 		if err != nil {
 			return err
 		}
-		defer stmt.Close()
+		defer func(stmt *sql.Stmt) {
+			_ = stmt.Close()
+		}(stmt)
 		_, err = stmt.Exec(serial, record.Domain)
 		if err != nil {
 			return err
@@ -401,7 +428,7 @@ func DeleteRecord(db *sql.DB, id int) error {
 	})
 }
 
-// 根据 record id获取 record
+// GetRecordById 根据 record id获取 record
 func GetRecordById(db *sql.DB, id int) (record types.Record, err error) {
 	err = withTransaction(db, func(tx *sql.Tx) error {
 		exists, err := RecordIsExist(tx, id)
@@ -415,7 +442,7 @@ func GetRecordById(db *sql.DB, id int) (record types.Record, err error) {
 		query := "SELECT domain, name, type, value FROM records WHERE id = ?"
 		err = tx.QueryRow(query, id).Scan(&record.Domain, &record.Name, &record.Type, &record.Value)
 		if err != nil {
-			if err == sql.ErrNoRows {
+			if errors.Is(err, sql.ErrNoRows) {
 				return fmt.Errorf("no record found for record id %d", id)
 			}
 			return err
@@ -427,13 +454,13 @@ func GetRecordById(db *sql.DB, id int) (record types.Record, err error) {
 	return record, err
 }
 
-// 获取config
+// GetConfig 获取config
 func GetConfig(db *sql.DB, key string) (types.Config, error) {
 	var config types.Config
 	query := "SELECT value FROM config WHERE key = ?"
 	err := db.QueryRow(query, key).Scan(&config.Value)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return types.Config{Key: key, Value: "no config found for key"}, fmt.Errorf("no config found for key: %s", key)
 		}
 		return types.Config{Key: key, Value: "no config found for key"}, err
@@ -441,7 +468,7 @@ func GetConfig(db *sql.DB, key string) (types.Config, error) {
 	return types.Config{Key: key, Value: config.Value}, nil
 }
 
-// 更新config
+// UpdateConfig 更新config
 func UpdateConfig(db *sql.DB, config types.Config) error {
 	query := "UPDATE config SET value = ? WHERE key = ?"
 	result, err := db.Exec(query, config.Value, config.Key)

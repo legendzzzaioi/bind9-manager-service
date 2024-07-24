@@ -74,7 +74,7 @@ func (l *LoginLogic) Login(ip string, req *types.LoginReq) (resp *types.LoginRes
 
 	// 生成jwt token
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString([]byte(secret))
+	tokenString, err := token.SignedString(secret)
 	if err != nil {
 		return nil, err
 	}

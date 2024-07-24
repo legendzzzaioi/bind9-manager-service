@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"flag"
 	"fmt"
 	"log"
@@ -37,7 +38,12 @@ func main() {
 		log.Fatalf("failed to generate files: %v", err)
 	}
 
-	defer ctx.DataSource.Close()
+	defer func(DataSource *sql.DB) {
+		err := DataSource.Close()
+		if err != nil {
+			log.Fatalf("failed to close database connection: %v", err)
+		}
+	}(ctx.DataSource)
 
 	if err := svc.StartBind9(); err != nil {
 		log.Fatalf("failed to start bind9: %v", err)

@@ -7,7 +7,7 @@ This backend project provides a solution for managing Bind9 using the Go-zero fr
 Build Docker Image
 
 ```
-docker build -t bind9-manager-service:v1 .
+docker build -t legendzzzaioi/bind9-manager-service:v1 .
 ```
 
 Run Docker Container

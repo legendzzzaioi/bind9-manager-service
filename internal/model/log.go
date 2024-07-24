@@ -36,7 +36,9 @@ func GetOperationLog(db *sql.DB, page, pageSize int) ([]types.OperationLog, erro
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func(rows *sql.Rows) {
+		_ = rows.Close()
+	}(rows)
 
 	var logs []types.OperationLog
 	for rows.Next() {
@@ -70,7 +72,9 @@ func GetUserLog(db *sql.DB, page, pageSize int) ([]types.UserLog, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func(rows *sql.Rows) {
+		_ = rows.Close()
+	}(rows)
 
 	var logs []types.UserLog
 	for rows.Next() {
@@ -104,7 +108,9 @@ func GetLoginLog(db *sql.DB, page, pageSize int) ([]types.LoginLog, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func(rows *sql.Rows) {
+		_ = rows.Close()
+	}(rows)
 
 	var logs []types.LoginLog
 	for rows.Next() {

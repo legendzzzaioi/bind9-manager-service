@@ -31,7 +31,7 @@ func NewServiceContext(c config.Config) (*ServiceContext, error) {
 	}, nil
 }
 
-// 初始化DB，文件存在则跳过
+// InitDB 初始化DB，文件存在则跳过
 func InitDB(filepath string) (*sql.DB, error) {
 	createTables := `
 	CREATE TABLE IF NOT EXISTS zones (

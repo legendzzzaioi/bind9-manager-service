@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-// 生成 bind9 所有配置
+// GenerateAllZoneFiles 生成 bind9 所有配置
 func GenerateAllZoneFiles(db *sql.DB, bindpath string) error {
 	// 确保 bindpath 目录存在
 	if err := os.MkdirAll(bindpath, 0755); err != nil {
@@ -30,7 +30,9 @@ func GenerateAllZoneFiles(db *sql.DB, bindpath string) error {
 			if err != nil {
 				return fmt.Errorf("failed to open named.conf.local: %w", err)
 			}
-			defer namedLocalConfFile.Close()
+			defer func(namedLocalConfFile *os.File) {
+				_ = namedLocalConfFile.Close()
+			}(namedLocalConfFile)
 			return nil
 		}
 		return fmt.Errorf("failed to get zones: %w", err)
@@ -41,7 +43,9 @@ func GenerateAllZoneFiles(db *sql.DB, bindpath string) error {
 	if err != nil {
 		return fmt.Errorf("failed to open named.conf.local: %w", err)
 	}
-	defer namedLocalConfFile.Close()
+	defer func(namedLocalConfFile *os.File) {
+		_ = namedLocalConfFile.Close()
+	}(namedLocalConfFile)
 
 	// 迭代所有 zones
 	var fileContent string
@@ -65,7 +69,7 @@ func GenerateAllZoneFiles(db *sql.DB, bindpath string) error {
 	return nil
 }
 
-// 生成 named.conf.local 文件
+// GenerateNamedLocalConf 生成 named.conf.local 文件
 func GenerateNamedLocalConf(db *sql.DB, bindpath string) error {
 	// 确保 bindpath 目录存在
 	if err := os.MkdirAll(bindpath, 0755); err != nil {
@@ -81,7 +85,9 @@ func GenerateNamedLocalConf(db *sql.DB, bindpath string) error {
 			if err != nil {
 				return fmt.Errorf("failed to open named.conf.local: %w", err)
 			}
-			defer namedLocalConfFile.Close()
+			defer func(namedLocalConfFile *os.File) {
+				_ = namedLocalConfFile.Close()
+			}(namedLocalConfFile)
 			return nil
 		}
 		return fmt.Errorf("failed to get zones: %w", err)
@@ -92,7 +98,9 @@ func GenerateNamedLocalConf(db *sql.DB, bindpath string) error {
 	if err != nil {
 		return fmt.Errorf("failed to open named.conf.local: %w", err)
 	}
-	defer namedLocalConfFile.Close()
+	defer func(namedLocalConfFile *os.File) {
+		_ = namedLocalConfFile.Close()
+	}(namedLocalConfFile)
 
 	// 迭代所有 zones，构建named.conf.local文件内容
 	var fileContent string
@@ -110,14 +118,16 @@ func GenerateNamedLocalConf(db *sql.DB, bindpath string) error {
 	return nil
 }
 
-// 生成并写入 zone 文件
+// GenerateZoneFile 生成并写入 zone 文件
 func GenerateZoneFile(db *sql.DB, bindpath string, zone types.Zone) error {
 	fileName := filepath.Join(bindpath, fmt.Sprintf("db-%s", zone.Domain))
 	file, err := os.Create(fileName)
 	if err != nil {
 		return fmt.Errorf("failed to create zone file for domain %s: %w", zone.Domain, err)
 	}
-	defer file.Close()
+	defer func(file *os.File) {
+		_ = file.Close()
+	}(file)
 
 	// 写入 zone 文件头部信息
 	if err := WriteZoneHeader(file, zone); err != nil {
@@ -132,14 +142,16 @@ func GenerateZoneFile(db *sql.DB, bindpath string, zone types.Zone) error {
 	return nil
 }
 
-// 根据 domain 生成并写入 zone 文件
+// GenerateZoneFileByDomain 根据 domain 生成并写入 zone 文件
 func GenerateZoneFileByDomain(db *sql.DB, bindpath string, domain string) error {
 	fileName := filepath.Join(bindpath, fmt.Sprintf("db-%s", domain))
 	file, err := os.Create(fileName)
 	if err != nil {
 		return fmt.Errorf("failed to create zone file for domain %s: %w", domain, err)
 	}
-	defer file.Close()
+	defer func(file *os.File) {
+		_ = file.Close()
+	}(file)
 
 	// 获取 zone
 	zone, err := GetZoneByDomain(db, domain)
@@ -160,7 +172,7 @@ func GenerateZoneFileByDomain(db *sql.DB, bindpath string, domain string) error 
 	return nil
 }
 
-// 写入 zone 文件头部信息
+// WriteZoneHeader 写入 zone 文件头部信息
 func WriteZoneHeader(file *os.File, zone types.Zone) error {
 	// SOA 记录
 	soa := fmt.Sprintf("$TTL %d\n@ IN SOA %s. %s. (\n\t%d ; Serial\n\t%d ; Refresh\n\t%d ; Retry\n\t%d ; Expire\n\t%d ) ; Negative Cache TTL\n",
@@ -178,14 +190,16 @@ func WriteZoneHeader(file *os.File, zone types.Zone) error {
 	return err
 }
 
-// 写入 zone 文件中的记录信息
+// WriteZoneRecords 写入 zone 文件中的记录信息
 func WriteZoneRecords(db *sql.DB, file *os.File, domain string) error {
 	query := "SELECT domain, name, type, value FROM records WHERE domain = ?"
 	rows, err := db.Query(query, domain)
 	if err != nil {
 		return fmt.Errorf("failed to query records for domain %s: %w", domain, err)
 	}
-	defer rows.Close()
+	defer func(rows *sql.Rows) {
+		_ = rows.Close()
+	}(rows)
 
 	for rows.Next() {
 		var record types.CreateRecord
@@ -201,7 +215,7 @@ func WriteZoneRecords(db *sql.DB, file *os.File, domain string) error {
 	return rows.Err()
 }
 
-// 根据 domain 删除 zone 文件
+// DeleteZoneFileByDomain 根据 domain 删除 zone 文件
 func DeleteZoneFileByDomain(bindpath string, domain string) error {
 	fileName := filepath.Join(bindpath, fmt.Sprintf("db-%s", domain))
 
@@ -218,7 +232,7 @@ func DeleteZoneFileByDomain(bindpath string, domain string) error {
 	return nil
 }
 
-// 生成 named.conf.options 文件
+// GenerateNamedOptionsConf 生成 named.conf.options 文件
 func GenerateNamedOptionsConf(db *sql.DB, bindpath string) error {
 	// 确保 bindpath 目录存在
 	if err := os.MkdirAll(bindpath, 0755); err != nil {
@@ -230,7 +244,9 @@ func GenerateNamedOptionsConf(db *sql.DB, bindpath string) error {
 	if err != nil {
 		return fmt.Errorf("failed to open named.conf.options: %w", err)
 	}
-	defer namedOptionsConfFile.Close()
+	defer func(namedOptionsConfFile *os.File) {
+		_ = namedOptionsConfFile.Close()
+	}(namedOptionsConfFile)
 
 	// 获取 named.conf.options 文件内容
 	namedConfOptions, err := GetConfig(db, "named.conf.options")
