@@ -1,8 +1,4 @@
-<<<<<<< HEAD
 FROM golang:1.22.5-alpine AS builder
-=======
-FROM golang:1.22.4-alpine AS builder
->>>>>>> c55ecc3e145b64b82079557c39bc34bec796a829
 
 LABEL stage=gobuilder
 
